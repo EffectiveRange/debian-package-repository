@@ -10,7 +10,7 @@ Restart=always
 RestartSec=10
 TimeoutStartSec=0
 ExecStartPre=-/usr/bin/docker pull effectiverange/debian-package-repository:${TAG}
-ExecStart=/usr/bin/docker run --net=host --name=debian-package-repository \
+ExecStart=/usr/bin/docker run -p 9000:9000 --name=debian-package-repository \
     -v /etc/effective-range/debian-package-repository:/etc/effective-range/debian-package-repository \
     -v /var/log/effective-range/debian-package-repository:/var/log/effective-range/debian-package-repository \
     -v /opt/debs:/opt/debs \

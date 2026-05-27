@@ -4,15 +4,15 @@
 
 import mimetypes
 import os
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+import time
+
 from context_logger import get_logger
 from flask import send_from_directory, abort, request, Response, render_template
-
 from package_repository import RepositoryCache, DirectoryServer
 
 log = get_logger('DirectoryService')
@@ -22,9 +22,6 @@ log = get_logger('DirectoryService')
 class DirectoryConfig:
     root_dir: Path
     version: str
-    username: str
-    password: str
-    private_dirs: list[Path]
     html_template: Path
 
 
@@ -69,9 +66,6 @@ class DefaultDirectoryService(DirectoryService):
             relative_path = Path(path)
             full_path = self._config.root_dir / relative_path
 
-            if not self._authorize(full_path):
-                return Response('Unauthorized', 401, {'WWW-Authenticate': 'Basic realm="Private Area"'})
-
             if full_path.is_dir():
                 log.debug('Listing directory', path=str(full_path))
                 return self._list_directory(relative_path, full_path)
@@ -104,14 +98,6 @@ class DefaultDirectoryService(DirectoryService):
             mimetype = 'text/plain'
 
         return Response(content, mimetype=mimetype, headers=headers)
-
-    def _authorize(self, full_path: Path) -> bool:
-        if any(full_path.is_relative_to(private_dir) for private_dir in self._config.private_dirs):
-            auth = request.authorization
-            if not auth or auth.username != self._config.username or auth.password != self._config.password:
-                return False
-
-        return True
 
     def _list_directory(self, path: Path, full_path: Path) -> Response:
         sort_by = request.args.get('sort', 'name')

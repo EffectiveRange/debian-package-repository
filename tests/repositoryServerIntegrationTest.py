@@ -176,7 +176,7 @@ def create_components():
 
     server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', "", 32, 1024, 1000, 60)
     directory_server = DefaultDirectoryServer(server_config)
-    directory_config = DirectoryConfig(REPOSITORY_DIR, APP_VERSION, 'admin', 'admin', [], DIRECTORY_TEMPLATE_PATH)
+    directory_config = DirectoryConfig(REPOSITORY_DIR, APP_VERSION, DIRECTORY_TEMPLATE_PATH)
     directory_service = DefaultDirectoryService(directory_server, repository_cache, directory_config)
 
     return repository_service, directory_service, directory_server

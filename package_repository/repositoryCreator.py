@@ -121,6 +121,14 @@ class DefaultRepositoryCreator(RepositoryCreator):
                 command = ['dpkg-scanpackages', '--multiversion', '--arch', architecture, str(package_dir)]
                 result = subprocess.run(command, capture_output=True, check=True)
 
+                if result.stderr:
+                    # remove last line break
+                    stderr = result.stderr.decode('utf-8').rstrip('\n')
+                    if result.returncode == 0:
+                        log.info(stderr, return_code=result.returncode)
+                    else:
+                        log.error(stderr, return_code=result.returncode)
+
                 packages_content = result.stdout
 
                 packages_path = arch_dir / 'Packages'
