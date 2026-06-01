@@ -2,9 +2,10 @@
 # SPDX-FileCopyrightText: 2024 Attila Gombos <attila.gombos@effective-range.com>
 # SPDX-License-Identifier: MIT
 
+import signal
+
 from common_utility import IReusableTimer, ReusableTimer
 from context_logger import get_logger
-
 from package_repository import RepositoryCreator, RepositorySigner, RepositoryCache, PackageWatcher
 
 
@@ -72,6 +73,11 @@ class DefaultRepositoryService(RepositoryService):
 
     def _update_repository(self, distribution: str) -> None:
         self.log.info('Updating repository', distribution=distribution)
-        self._creator.create(distribution)
-        self._signer.sign(distribution)
-        self._cache.switch(distribution)
+
+        try:
+            self._creator.create(distribution)
+            self._signer.sign(distribution)
+            self._cache.switch(distribution)
+        except Exception as error:
+            self.log.error('Failed to update repository', distribution=distribution, error=str(error))
+            signal.raise_signal(signal.SIGINT)

@@ -16,7 +16,7 @@ class GpgException(Exception):
         super().__init__(message)
         self.operation = type(result).__name__.replace('Result', '')
         self.code = result.returncode
-        self.status = result.status
+        self.status = result.status if hasattr(result, 'status') else None
         self.error = result.stderr if hasattr(result, 'stderr') else None
 
 

@@ -60,15 +60,11 @@ class DefaultRepositoryCreator(RepositoryCreator):
         self._link_package_dir()
 
     def create(self, distribution: str) -> None:
-        current_dir = os.getcwd()
-
         os.chdir(self._config.repository_dir)
 
         packages_files = self._generate_packages_files(distribution)
 
         self._generate_release_file(distribution, packages_files)
-
-        os.chdir(current_dir)
 
     def _create_repository_dir(self) -> None:
         if not self._config.repository_dir.is_dir():
@@ -127,13 +123,14 @@ class DefaultRepositoryCreator(RepositoryCreator):
                     else:
                         self.log.error(stderr, return_code=result.returncode)
 
+                packages_path = arch_dir / 'Packages'
+
                 if result.returncode != 0:
-                    self.log.error('Failed to generate Packages file', file=str(package_dir), distribution=distribution,
-                                   component=component, return_code=result.returncode)
+                    self.log.error('Failed to generate Packages file', file=str(packages_path),
+                                   distribution=distribution, component=component, architecture=architecture)
+                    raise RuntimeError('Failed to generate Packages file')
 
                 packages_content = result.stdout
-
-                packages_path = arch_dir / 'Packages'
 
                 self._create_file(distribution, packages_path, packages_content)
 

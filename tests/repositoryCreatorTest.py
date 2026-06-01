@@ -1,14 +1,14 @@
 import gzip
 import os
+import subprocess
 import unittest
 from unittest import TestCase
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from common_utility import delete_directory, render_template_file, create_directory
 from context_logger import setup_logging
-from test_utility import compare_lines
-
 from package_repository import RepositoryConfig, DefaultRepositoryCreator, RepositoryCache, ReleaseInfo
+from test_utility import compare_lines
 from tests import (
     create_test_packages,
     TEST_RESOURCE_ROOT,
@@ -130,6 +130,26 @@ class RepositoryCreatorTest(TestCase):
 
         all_matches = compare_lines(expected_release, release, exclusions)
         self.assertTrue(all_matches)
+
+    @patch('package_repository.repositoryCreator.subprocess.run')
+    def test_create_when_scanpackages_returns_non_zero_raises_error(self, mock_run):
+        # Given
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=['dpkg-scanpackages'],
+            returncode=1,
+            stdout=b'',
+            stderr=b'mocked error\n',
+        )
+
+        cache, config, info = create_components()
+        creator = DefaultRepositoryCreator(cache, config, info)
+        creator.initialize()
+
+        # When / Then
+        with self.assertRaises(RuntimeError):
+            creator.create('trixie')
+
+        self.assertTrue(mock_run.called)
 
 
 def create_components():
