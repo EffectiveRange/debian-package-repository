@@ -81,7 +81,7 @@ setup(
     use_scm_version=True,
     setup_requires=[
         'setuptools_scm',
-        'python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@v1.7.3'
+        'python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@v1.7.6'
     ],
     install_requires=[
         'flask',
@@ -90,6 +90,6 @@ setup(
         'jinja2',
         'python-gnupg',
         'requests',
-        'python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@v1.7.3',
+        'python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@v1.7.6',
     ],
 )

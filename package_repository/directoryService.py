@@ -15,8 +15,6 @@ from context_logger import get_logger
 from flask import send_from_directory, abort, request, Response, render_template
 from package_repository import RepositoryCache, DirectoryServer
 
-log = get_logger('DirectoryService')
-
 
 @dataclass
 class DirectoryConfig:
@@ -40,6 +38,7 @@ class DefaultDirectoryService(DirectoryService):
         self._web_server = web_server
         self._cache = cache
         self._config = config
+        self.log = get_logger(type(self).__name__)
 
         self._register_routes()
 
@@ -67,24 +66,24 @@ class DefaultDirectoryService(DirectoryService):
             full_path = self._config.root_dir / relative_path
 
             if full_path.is_dir():
-                log.debug('Listing directory', path=str(full_path))
+                self.log.debug('Listing directory', path=str(full_path))
                 return self._list_directory(relative_path, full_path)
             elif relative_path.parts[0] == 'dists':
                 distribution = relative_path.parts[1]
-                log.debug('Serving cached file', distribution=distribution, path=str(full_path))
+                self.log.debug('Serving cached file', distribution=distribution, path=str(full_path))
                 return self._load_from_cache(distribution, full_path)
             elif full_path.is_file():
-                log.debug('Serving file', path=str(full_path))
+                self.log.debug('Serving file', path=str(full_path))
                 return send_from_directory(self._config.root_dir, path, as_attachment=False, mimetype='text/plain')
             else:
-                log.debug('File or directory not found', path=str(full_path))
+                self.log.debug('File or directory not found', path=str(full_path))
                 return abort(404)
 
     def _load_from_cache(self, distribution: str, full_path: Path) -> Response:
         content = self._cache.load(distribution, full_path)
 
         if not content:
-            log.error('Failed to load file from cache', distribution=distribution, path=str(full_path))
+            self.log.error('Failed to load file from cache', distribution=distribution, path=str(full_path))
             return abort(404)
 
         mimetype, encoding = mimetypes.guess_type(full_path)

@@ -10,8 +10,6 @@ from context_logger import get_logger
 from flask import Flask
 from waitress.server import create_server
 
-log = get_logger('DirectoryServer')
-
 
 @dataclass
 class ServerConfig:
@@ -54,6 +52,7 @@ class DefaultDirectoryServer(DirectoryServer):
                                      channel_timeout=config.channel_timeout)
         self._thread: Thread | None = None
         self._lock = Lock()
+        self.log = get_logger(type(self).__name__)
 
     def __enter__(self) -> DirectoryServer:
         return self
@@ -71,7 +70,7 @@ class DefaultDirectoryServer(DirectoryServer):
 
     def stop(self) -> None:
         with self._lock:
-            log.info('Stopping server')
+            self.log.info('Stopping server')
             self._server.close()
             if self._thread:
                 self._thread.join(1)
@@ -86,7 +85,7 @@ class DefaultDirectoryServer(DirectoryServer):
 
     def _start_server(self) -> None:
         try:
-            log.info('Starting server', config=self._config)
+            self.log.info('Starting server', config=self._config)
             self._server.run()
         except Exception as error:
-            log.info('Shutdown', reason=error)
+            self.log.info('Shutdown', reason=error)

@@ -7,10 +7,7 @@ from pathlib import Path
 
 from context_logger import get_logger
 from gnupg import GPG, ImportResult, Sign, Verify
-
 from package_repository import RepositoryCache
-
-log = get_logger('RepositorySigner')
 
 
 class GpgException(Exception):
@@ -62,6 +59,7 @@ class DefaultRepositorySigner(RepositorySigner):
         self._private_key = private_key
         self._public_key = public_key
         self._repository_dir = repository_dir
+        self.log = get_logger(type(self).__name__)
 
     def initialize(self) -> None:
         self._import_private_key()
@@ -80,22 +78,22 @@ class DefaultRepositorySigner(RepositorySigner):
     def _add_public_key(self) -> None:
         target_path = self._repository_dir / self._public_key.public_name
         shutil.copyfile(self._public_key.path, target_path)
-        log.info('Added public key file', file=str(target_path))
+        self.log.info('Added public key file', file=str(target_path))
 
     def _import_private_key(self) -> None:
         key_id = self._private_key.id
         key_path = self._private_key.path
 
         if self._is_key_available():
-            log.debug('Private key already present', key_id=key_id)
+            self.log.debug('Private key already present', key_id=key_id)
         else:
             result: ImportResult = self._gpg.import_keys_file(str(key_path))
 
             if result.returncode != 0:
-                log.error('Failed to import private key', file=str(key_path), key_id=key_id)
+                self.log.error('Failed to import private key', file=str(key_path), key_id=key_id)
                 raise GpgException('Failed to import private key', result)
             else:
-                log.info('Imported private key', key_id=key_id)
+                self.log.info('Imported private key', key_id=key_id)
 
     def _is_key_available(self) -> bool:
         for key in self._gpg.list_keys():
@@ -125,14 +123,14 @@ class DefaultRepositorySigner(RepositorySigner):
 
         self._create_signature(distribution, release_path, in_release_path, detach=False)
 
-        log.info('Created signed Release file', file=str(in_release_path))
+        self.log.info('Created signed Release file', file=str(in_release_path))
 
     def _create_detached_signature(self, distribution: str, release_path: Path) -> None:
         signature_path = Path(f'{release_path}.gpg')
 
         self._create_signature(distribution, release_path, signature_path, detach=True)
 
-        log.info('Created signature file', file=str(signature_path))
+        self.log.info('Created signature file', file=str(signature_path))
 
     def _create_signature(self, distribution: str, release_path: Path, signature_path: Path, detach: bool) -> None:
         result: Sign = self._gpg.sign_file(
@@ -142,12 +140,13 @@ class DefaultRepositorySigner(RepositorySigner):
             detach=detach
         )
 
-        if result.returncode != 0:
-            log.error('Failed to create signature', file=str(release_path), signature=str(signature_path))
+        if result.returncode != 0 or result.on_data_failure:
+            self.log.error('Failed to create signature', file=str(release_path), signature=str(signature_path),
+                           return_code=result.returncode, data_failure=result.on_data_failure)
             raise GpgException('Failed to create signature', result)
         else:
             self._create_file(distribution, signature_path, result.data)
-            log.debug('Created signature', file=str(signature_path))
+            self.log.debug('Created signature', file=str(signature_path))
 
         self._verify_signature(release_path, signature_path, detached=detach)
 
@@ -161,8 +160,9 @@ class DefaultRepositorySigner(RepositorySigner):
         with open(signature_path, 'rb') as signature_file:
             result: Verify = self._gpg.verify_file(signature_file, str(release_path) if detached else None)
 
-        if result.returncode != 0:
-            log.error('Failed to verify signature', file=str(release_path), signature=str(signature_path))
+        if result.returncode != 0 or result.on_data_failure:
+            self.log.error('Failed to verify signature', file=str(release_path), signature=str(signature_path),
+                           return_code=result.returncode, data_failure=result.on_data_failure)
             raise GpgException('Failed to verify signature', result)
         else:
-            log.debug('Verified signature', file=str(signature_path))
+            self.log.debug('Verified signature', file=str(signature_path))

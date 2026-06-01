@@ -9,8 +9,6 @@ from context_logger import get_logger
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers.api import BaseObserver
 
-log = get_logger('PackageWatcher')
-
 
 class OnPackageEvent(Protocol):
     def __call__(self, distribution: str) -> None: ...
@@ -37,10 +35,11 @@ class DefaultPackageWatcher(PackageWatcher, FileSystemEventHandler):
         self._observer = observer
         self._deb_package_dir = deb_package_dir
         self._handlers: list[OnPackageEvent] = []
+        self.log = get_logger(type(self).__name__)
 
     def start(self) -> None:
         deb_package_dir = str(self._deb_package_dir)
-        log.info('Watching package pool for changes', directory=deb_package_dir)
+        self.log.info('Watching package pool for changes', directory=deb_package_dir)
         self._observer.schedule(self, deb_package_dir, recursive=True)
         self._observer.start()
 
@@ -64,7 +63,7 @@ class DefaultPackageWatcher(PackageWatcher, FileSystemEventHandler):
 
     def _on_changed(self, event: FileSystemEvent) -> None:
         if str(event.src_path).endswith('.deb'):
-            log.debug('File change event detected for package', event_type=event.event_type, file=event.src_path)
+            self.log.debug('File change event detected for package', event_type=event.event_type, file=event.src_path)
 
             try:
                 relative_path = Path(str(event.src_path)).relative_to(self._deb_package_dir)
@@ -73,12 +72,13 @@ class DefaultPackageWatcher(PackageWatcher, FileSystemEventHandler):
                 for handler in self._handlers:
                     self._execute_handler(handler, distribution)
             except Exception as error:
-                log.error('Could not determine distribution from file path', error=error, file=event.src_path)
+                self.log.error('Could not determine distribution from file path', error=error, file=event.src_path)
         else:
-            log.debug('File change event, ignoring as not a package', event_type=event.event_type, file=event.src_path)
+            self.log.debug('File change event, ignoring as not a package',
+                           event_type=event.event_type, file=event.src_path)
 
     def _execute_handler(self, handler: OnPackageEvent, distribution: str) -> None:
         try:
             handler(distribution)
         except Exception as error:
-            log.error('Error when executing package event handler', error=error, distribution=distribution)
+            self.log.error('Error when executing package event handler', error=error, distribution=distribution)

@@ -19,7 +19,7 @@ from package_repository import (RepositoryService, DirectoryService, PublicGpgKe
                                 ServerConfig, DefaultDirectoryServer, DirectoryConfig, DefaultDirectoryService)
 from watchdog.observers import Observer
 
-log = get_logger('RepositoryServer')
+log = get_logger('RepositoryServerApp')
 
 DEFAULT_CONFIG_PATH = Path(f'/etc/effective-range/{APPLICATION_NAME}/{APPLICATION_NAME}.conf.default')
 
@@ -39,6 +39,7 @@ class DefaultRepositoryServer(RepositoryServer):
         self._repository_service = repository_service
         self._directory_service = directory_service
         self._shutdown_event = Event()
+        self.log = get_logger(type(self).__name__)
 
     def __enter__(self) -> RepositoryServer:
         return self
@@ -47,10 +48,10 @@ class DefaultRepositoryServer(RepositoryServer):
         self.shutdown()
 
     def run(self) -> None:
-        log.info('Starting service', service='repository-service')
+        self.log.info('Starting service', service='repository-service')
         self._repository_service.start()
 
-        log.info('Starting service', service='directory-service')
+        self.log.info('Starting service', service='directory-service')
         self._directory_service.start()
 
         self._shutdown_event.wait()

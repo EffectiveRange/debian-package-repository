@@ -7,8 +7,6 @@ from context_logger import get_logger
 
 from package_repository import RepositoryCreator, RepositorySigner, RepositoryCache, PackageWatcher
 
-log = get_logger('RepositoryService')
-
 
 class RepositoryService:
 
@@ -30,9 +28,10 @@ class DefaultRepositoryService(RepositoryService):
         self._distributions = distributions
         self._trigger_delay = trigger_delay
         self._timers: dict[str, IReusableTimer] = {}
+        self.log = get_logger(type(self).__name__)
 
     def start(self) -> None:
-        log.info('Initializing repository')
+        self.log.info('Initializing repository')
 
         self._cache.initialize()
         self._creator.initialize()
@@ -50,18 +49,16 @@ class DefaultRepositoryService(RepositoryService):
 
     def _handle_event(self, distribution: str) -> None:
         if distribution not in self._distributions:
-            log.warning('Received event for unsupported distribution', distribution=distribution)
+            self.log.warning('Received event for unsupported distribution', distribution=distribution)
             return
 
         timer = self._get_timer(distribution)
 
         if timer.is_alive():
-            log.info('Re-scheduling repository update',
-                     distribution=distribution, delay=self._trigger_delay)
+            self.log.info('Re-scheduling repository update', distribution=distribution, delay=self._trigger_delay)
             timer.restart()
         else:
-            log.info('Scheduling repository update',
-                     distribution=distribution, delay=self._trigger_delay)
+            self.log.info('Scheduling repository update', distribution=distribution, delay=self._trigger_delay)
             timer.start(self._trigger_delay, self._update_repository, [distribution])
 
     def _get_timer(self, distribution: str) -> IReusableTimer:
@@ -74,7 +71,7 @@ class DefaultRepositoryService(RepositoryService):
         return timer
 
     def _update_repository(self, distribution: str) -> None:
-        log.info('Updating repository', distribution=distribution)
+        self.log.info('Updating repository', distribution=distribution)
         self._creator.create(distribution)
         self._signer.sign(distribution)
         self._cache.switch(distribution)
