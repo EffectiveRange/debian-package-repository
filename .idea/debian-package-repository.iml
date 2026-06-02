@@ -3,10 +3,9 @@
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/apt_repository" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/apt_server" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/package_repository" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/.venv/lib/python3.11/site-packages" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/.eggs" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/apt_server.egg-info" />
@@ -15,8 +14,9 @@
       <excludeFolder url="file://$MODULE_DIR$/tests/package/build" />
       <excludeFolder url="file://$MODULE_DIR$/tests/test-debs" />
       <excludeFolder url="file://$MODULE_DIR$/tests/test-repo" />
+      <excludeFolder url="file://$MODULE_DIR$/temp" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="WSL (Debian): (/home/attilagombos/EffectiveRange2/debian-package-repository/.venv/bin/python3)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TemplatesService">

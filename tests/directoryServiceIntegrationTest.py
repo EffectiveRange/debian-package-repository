@@ -1,4 +1,3 @@
-import base64
 import gzip
 import os
 import unittest
@@ -8,10 +7,9 @@ from unittest import TestCase
 
 from common_utility import delete_directory, create_file, create_directory
 from context_logger import setup_logging
-from test_utility import wait_for_condition
-
 from package_repository import DefaultDirectoryServer, ServerConfig, DirectoryConfig, DefaultDirectoryService, \
     DefaultRepositoryCache
+from test_utility import wait_for_condition
 from tests import (
     create_test_packages,
     TEST_RESOURCE_ROOT,
@@ -203,89 +201,6 @@ class DirectoryServiceTest(TestCase):
             self.assertEqual('attachment; filename="info.gz"', response.headers['Content-Disposition'])
             self.assertEqual(cache._read_cache['trixie'][compressed_path], response.data)
 
-    def test_returns_200_when_accessing_private_directory_with_auth(self):
-        # Given
-        web_server, cache, config = create_components()
-        config.private_dirs = [REPOSITORY_DIR / 'pool/trixie/main']
-
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
-            # When
-            directory_service.start()
-
-            wait_for_condition(1, lambda: web_server.is_running())
-
-            client = web_server._app.test_client()
-
-            credentials = base64.b64encode(f'{config.username}:{config.password}'.encode()).decode()
-
-            # When
-            response = client.get('/pool/trixie/main', headers={'Authorization': f'Basic {credentials}'})
-
-            # Then
-            self.assertEqual(200, response.status_code)
-
-    def test_returns_200_when_accessing_private_file_with_auth(self):
-        # Given
-        web_server, cache, config = create_components()
-        config.private_dirs = [REPOSITORY_DIR / 'pool/trixie/main']
-
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
-            # When
-            directory_service.start()
-
-            wait_for_condition(1, lambda: web_server.is_running())
-
-            client = web_server._app.test_client()
-
-            credentials = base64.b64encode(f'{config.username}:{config.password}'.encode()).decode()
-
-            # When
-            response = client.get('/pool/trixie/main/hello-world_0.0.1-1_amd64.deb',
-                                  headers={'Authorization': f'Basic {credentials}'})
-
-            # Then
-            self.assertEqual(200, response.status_code)
-            with open(PACKAGE_DIR / 'trixie/main/hello-world_0.0.1-1_amd64.deb', 'rb') as file:
-                self.assertEqual(file.read(), response.data)
-
-    def test_returns_401_when_accessing_private_directory_without_auth(self):
-        # Given
-        web_server, cache, config = create_components()
-        config.private_dirs = [REPOSITORY_DIR / 'pool/trixie']
-
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
-            # When
-            directory_service.start()
-
-            wait_for_condition(1, lambda: web_server.is_running())
-
-            client = web_server._app.test_client()
-
-            # When
-            response = client.get('/pool/trixie')
-
-            # Then
-            self.assertEqual(401, response.status_code)
-
-    def test_returns_401_when_accessing_private_file_without_auth(self):
-        # Given
-        web_server, cache, config = create_components()
-        config.private_dirs = [REPOSITORY_DIR / 'pool/trixie']
-
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
-            # When
-            directory_service.start()
-
-            wait_for_condition(1, lambda: web_server.is_running())
-
-            client = web_server._app.test_client()
-
-            # When
-            response = client.get('/pool/trixie/main/hello-world_0.0.1-1_amd64.deb')
-
-            # Then
-            self.assertEqual(401, response.status_code)
-
     def test_returns_404_when_accessing_non_existing_path(self):
         # Given
         web_server, cache, config = create_components()
@@ -309,8 +224,7 @@ def create_components():
     web_server = DefaultDirectoryServer(ServerConfig(['*:0']))
     cache = DefaultRepositoryCache({'bookworm', 'trixie'})
     cache.initialize()
-    config = DirectoryConfig(REPOSITORY_DIR, '1.0.0', 'admin', 'admin', [],
-                             Path(f'{RESOURCE_ROOT}/templates/directory.j2'))
+    config = DirectoryConfig(REPOSITORY_DIR, '1.0.0', Path(f'{RESOURCE_ROOT}/templates/directory.j2'))
     return web_server, cache, config
 
 

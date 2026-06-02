@@ -1,22 +1,23 @@
+import signal
 import unittest
 from concurrent.futures import ThreadPoolExecutor, Future
 from importlib.metadata import version
 from pathlib import Path
-from threading import Thread
+from threading import Thread, Event
 from unittest import TestCase
+from unittest.mock import MagicMock
 
 import requests
 from common_utility import delete_directory, render_template_file
 from context_logger import setup_logging
 from gnupg import GPG
-from test_utility import wait_for_condition, compare_lines
-from watchdog.observers import Observer
-
 from package_repository import DefaultDirectoryService, DefaultRepositoryService, DirectoryConfig, \
     DefaultDirectoryServer, ServerConfig, DefaultRepositoryCache, DefaultRepositorySigner, DefaultRepositoryCreator, \
     RepositoryConfig, DefaultPackageWatcher, PublicGpgKey, PrivateGpgKey, DefaultRepositoryServer, ReleaseInfo
+from test_utility import wait_for_condition, compare_lines
 from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, \
     PACKAGE_DIR, RELEASE_TEMPLATE_PATH
+from watchdog.observers import Observer
 
 APP_VERSION = '1.0.0'
 PRIVATE_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/private-key.asc')
@@ -159,6 +160,29 @@ class RepositoryServerIntegrationTest(TestCase):
 
         wait_for_condition(1, lambda: not directory_server.is_running())
 
+    def test_update_repository_when_creation_fails_sends_sigint(self):
+        # Given
+        repository_service, _, _ = create_components()
+        repository_service._creator.create = MagicMock(side_effect=RuntimeError('mocked failure'))
+        handler_called = Event()
+        original_handler = signal.getsignal(signal.SIGINT)
+
+        def mock_signal_handler(signum, frame):
+            if signum == signal.SIGINT:
+                handler_called.set()
+
+        signal.signal(signal.SIGINT, mock_signal_handler)
+
+        try:
+            # When
+            repository_service._update_repository('trixie')
+
+            # Then
+            wait_for_condition(1, lambda: handler_called.is_set())
+        finally:
+            # Restore original (test runner) signal handler
+            signal.signal(signal.SIGINT, original_handler)
+
 
 def create_components():
     file_observer = Observer()
@@ -176,7 +200,7 @@ def create_components():
 
     server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', "", 32, 1024, 1000, 60)
     directory_server = DefaultDirectoryServer(server_config)
-    directory_config = DirectoryConfig(REPOSITORY_DIR, APP_VERSION, 'admin', 'admin', [], DIRECTORY_TEMPLATE_PATH)
+    directory_config = DirectoryConfig(REPOSITORY_DIR, APP_VERSION, DIRECTORY_TEMPLATE_PATH)
     directory_service = DefaultDirectoryService(directory_server, repository_cache, directory_config)
 
     return repository_service, directory_service, directory_server

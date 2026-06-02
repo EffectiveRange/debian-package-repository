@@ -15,6 +15,8 @@ on:
 jobs:
   call_ci:
     uses: EffectiveRange/ci-workflows/.github/workflows/python-ci.yaml@latest-python
+    with:
+      coverage-threshold: 90
 
   push_docker_image:
     if: startsWith(github.ref, 'refs/tags/')

@@ -15,10 +15,7 @@ from typing import Tuple
 
 from common_utility import create_directory, render_template_file
 from context_logger import get_logger
-
 from package_repository import RepositoryCache
-
-log = get_logger('RepositoryCreator')
 
 
 @dataclass
@@ -56,41 +53,38 @@ class DefaultRepositoryCreator(RepositoryCreator):
         self._config = config
         self._info = info
         self._architectures = sorted({'all'} | config.architectures)
+        self.log = get_logger(type(self).__name__)
 
     def initialize(self) -> None:
         self._create_repository_dir()
         self._link_package_dir()
 
     def create(self, distribution: str) -> None:
-        current_dir = os.getcwd()
-
         os.chdir(self._config.repository_dir)
 
         packages_files = self._generate_packages_files(distribution)
 
         self._generate_release_file(distribution, packages_files)
 
-        os.chdir(current_dir)
-
     def _create_repository_dir(self) -> None:
         if not self._config.repository_dir.is_dir():
-            log.info('Creating repository directory', directory=str(self._config.repository_dir))
+            self.log.info('Creating repository directory', directory=str(self._config.repository_dir))
             os.makedirs(self._config.repository_dir)
 
     def _link_package_dir(self) -> None:
         target_link = self._config.repository_dir / 'pool'
 
         if target_link.exists() or target_link.is_symlink():
-            log.debug('Removing existing link', target=str(target_link))
+            self.log.debug('Removing existing link', target=str(target_link))
             self._clean_target(target_link)
 
         source_dir = self._config.deb_package_dir
 
         if not source_dir.is_dir():
-            log.info('Creating package pool directory', directory=str(source_dir))
+            self.log.info('Creating package pool directory', directory=str(source_dir))
             os.makedirs(source_dir)
 
-        log.info('Linking package pool directory', source=str(source_dir), target=str(target_link))
+        self.log.info('Linking package pool directory', source=str(source_dir), target=str(target_link))
         os.symlink(source_dir, target_link, target_is_directory=True)
 
     def _clean_target(self, target_link: Path) -> None:
@@ -119,16 +113,29 @@ class DefaultRepositoryCreator(RepositoryCreator):
                 create_directory(arch_dir)
 
                 command = ['dpkg-scanpackages', '--multiversion', '--arch', architecture, str(package_dir)]
-                result = subprocess.run(command, capture_output=True, check=True)
+                result = subprocess.run(command, capture_output=True)
 
-                packages_content = result.stdout
+                if result.stderr:
+                    # remove last line break
+                    stderr = result.stderr.decode('utf-8').rstrip('\n')
+                    if result.returncode == 0:
+                        self.log.info(stderr, return_code=result.returncode)
+                    else:
+                        self.log.error(stderr, return_code=result.returncode)
 
                 packages_path = arch_dir / 'Packages'
 
+                if result.returncode != 0:
+                    self.log.error('Failed to generate Packages file', file=str(packages_path),
+                                   distribution=distribution, component=component, architecture=architecture)
+                    raise RuntimeError('Failed to generate Packages file')
+
+                packages_content = result.stdout
+
                 self._create_file(distribution, packages_path, packages_content)
 
-                log.info('Generated Packages file', file=str(packages_path),
-                         distribution=distribution, component=component, architecture=architecture)
+                self.log.info('Generated Packages file', file=str(packages_path),
+                              distribution=distribution, component=component, architecture=architecture)
 
                 packages_files.append(packages_path)
 
@@ -176,7 +183,7 @@ class DefaultRepositoryCreator(RepositoryCreator):
 
         self._create_file(distribution, release_path, rendered_content)
 
-        log.info('Generated Release file', file=str(release_path), distribution=distribution)
+        self.log.info('Generated Release file', file=str(release_path), distribution=distribution)
 
     def _create_file(self, distribution: str, file_path: Path, content: bytes, compressed: bool = False) -> None:
         if compressed:

@@ -1,12 +1,12 @@
+import signal
 import unittest
 from unittest import TestCase
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 from context_logger import setup_logging
-from test_utility import wait_for_assertion
-
 from package_repository import PackageWatcher, RepositoryCreator, RepositorySigner, RepositoryCache, \
     DefaultRepositoryService
+from test_utility import wait_for_assertion
 from tests import APPLICATION_NAME
 
 
@@ -87,6 +87,21 @@ class RepositoryServiceTest(TestCase):
 
         # Then
         creator.create.assert_not_called()
+        signer.sign.assert_not_called()
+        cache.switch.assert_not_called()
+
+    @patch('package_repository.repositoryService.signal.raise_signal')
+    def test_update_repository_when_creator_fails_raises_sigint(self, mock_raise_signal):
+        # Given
+        watcher, creator, signer, cache = create_components()
+        creator.create.side_effect = RuntimeError('boom')
+        service = DefaultRepositoryService(watcher, creator, signer, cache, {'bookworm', 'trixie'}, 0.1)
+
+        # When
+        service._update_repository('trixie')
+
+        # Then
+        mock_raise_signal.assert_called_once_with(signal.SIGINT)
         signer.sign.assert_not_called()
         cache.switch.assert_not_called()
 
