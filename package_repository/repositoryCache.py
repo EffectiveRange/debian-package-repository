@@ -37,23 +37,25 @@ class DefaultRepositoryCache(RepositoryCache):
 
     def store(self, distribution: str, path: Path, content: bytes) -> None:
         if distribution in self._write_cache:
-            self.log.debug('Storing content to cache', distribution=distribution, path=str(path))
+            self.log.debug('Storing content to repository cache', distribution=distribution, path=str(path))
             self._write_cache[distribution][path] = content
         else:
-            self.log.warning('Attempted to store to unsupported cache', distribution=distribution, path=str(path))
+            self.log.warning('Attempted to store to unsupported repository cache', distribution=distribution,
+                             path=str(path))
 
     def load(self, distribution: str, path: Path) -> bytes | None:
         if distribution in self._read_cache:
-            self.log.debug('Loading content from cache', distribution=distribution, path=str(path))
+            self.log.debug('Loading content from repository cache', distribution=distribution, path=str(path))
             return self._read_cache[distribution].get(path)
         else:
-            self.log.warning('Attempted to load from unsupported cache', distribution=distribution, path=str(path))
+            self.log.warning('Attempted to load from unsupported repository cache',
+                             distribution=distribution, path=str(path))
             return None
 
     def switch(self, distribution: str) -> None:
         if distribution in self._read_cache:
-            self.log.info('Switching cache for distribution', distribution=distribution)
+            self.log.info('Switching repository cache for distribution', distribution=distribution)
             self._read_cache[distribution] = self._write_cache[distribution]
             self._write_cache[distribution] = {}
         else:
-            self.log.warning('Attempted to switch unsupported cache', distribution=distribution)
+            self.log.warning('Attempted to switch unsupported repository cache', distribution=distribution)

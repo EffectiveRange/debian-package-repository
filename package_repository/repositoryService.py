@@ -6,7 +6,7 @@ import signal
 
 from common_utility import IReusableTimer, ReusableTimer
 from context_logger import get_logger
-from package_repository import RepositoryCreator, RepositorySigner, RepositoryCache, PackageWatcher
+from package_repository import RepositoryCreator, RepositorySigner, RepositoryCache, PackageWatcher, MetadataLoader
 
 
 class RepositoryService:
@@ -21,11 +21,13 @@ class RepositoryService:
 class DefaultRepositoryService(RepositoryService):
 
     def __init__(self, watcher: PackageWatcher, creator: RepositoryCreator, signer: RepositorySigner,
-                 cache: RepositoryCache, distributions: set[str], trigger_delay: float) -> None:
+                 cache: RepositoryCache, loader: MetadataLoader, distributions: set[str],
+                 trigger_delay: float) -> None:
         self._watcher = watcher
         self._creator = creator
         self._signer = signer
         self._cache = cache
+        self._loader = loader
         self._distributions = distributions
         self._trigger_delay = trigger_delay
         self._timers: dict[str, IReusableTimer] = {}
@@ -78,6 +80,7 @@ class DefaultRepositoryService(RepositoryService):
             self._creator.create(distribution)
             self._signer.sign(distribution)
             self._cache.switch(distribution)
+            self._loader.load(distribution)
         except Exception as error:
             self.log.error('Failed to update repository', distribution=distribution, error=str(error))
             signal.raise_signal(signal.SIGINT)

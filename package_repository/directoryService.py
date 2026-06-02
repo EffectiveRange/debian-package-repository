@@ -4,16 +4,15 @@
 
 import mimetypes
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-import time
-
 from context_logger import get_logger
-from flask import send_from_directory, abort, request, Response, render_template
-from package_repository import RepositoryCache, DirectoryServer
+from flask import send_from_directory, abort, request, Response, render_template, jsonify
+from package_repository import RepositoryCache, DirectoryServer, MetadataCache
 
 
 @dataclass
@@ -34,9 +33,11 @@ class DirectoryService:
 
 class DefaultDirectoryService(DirectoryService):
 
-    def __init__(self, web_server: DirectoryServer, cache: RepositoryCache, config: DirectoryConfig) -> None:
+    def __init__(self, web_server: DirectoryServer, repository_cache: RepositoryCache, metadata_cache: MetadataCache,
+                 config: DirectoryConfig) -> None:
         self._web_server = web_server
-        self._cache = cache
+        self._repository_cache = repository_cache
+        self._metadata_cache = metadata_cache
         self._config = config
         self.log = get_logger(type(self).__name__)
 
@@ -59,10 +60,16 @@ class DefaultDirectoryService(DirectoryService):
 
         app.template_folder = str(self._config.html_template.parent)
 
-        @app.route('/', defaults={'path': ''})
-        @app.route('/<path:path>')
+        @app.route('/', defaults={'path': ''}, methods=['GET'])
+        @app.route('/<path:path>', methods=['GET'])
         def serve_file_or_directory(path: str) -> Response:
             relative_path = Path(path)
+
+            # Reserve /api for explicit API routes instead of static file serving.
+            if path.startswith('api/'):
+                self.log.debug('Reserved API path requested from file endpoint', path=path)
+                return abort(404)
+
             full_path = self._config.root_dir / relative_path
 
             if full_path.is_dir():
@@ -79,8 +86,23 @@ class DefaultDirectoryService(DirectoryService):
                 self.log.debug('File or directory not found', path=str(full_path))
                 return abort(404)
 
+        @app.route('/api/<distribution>/<architecture>/<package>', methods=['GET'])
+        def serve_package_metadata(distribution: str, architecture: str, package: str) -> Response:
+            self.log.debug('API request for package metadata',
+                           distribution=distribution, architecture=architecture, package=package)
+            metadata = self._metadata_cache.load(distribution, architecture, package)
+            if metadata is None:
+                self.log.debug('Package metadata not found in cache',
+                               distribution=distribution, architecture=architecture, package=package)
+                return abort(404)
+            return self._add_headers(jsonify(metadata))
+
+    def _add_headers(self, response: Response) -> Response:
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
     def _load_from_cache(self, distribution: str, full_path: Path) -> Response:
-        content = self._cache.load(distribution, full_path)
+        content = self._repository_cache.load(distribution, full_path)
 
         if not content:
             self.log.error('Failed to load file from cache', distribution=distribution, path=str(full_path))

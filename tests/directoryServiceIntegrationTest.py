@@ -219,6 +219,24 @@ class DirectoryServiceTest(TestCase):
             # Then
             self.assertEqual(404, response.status_code)
 
+    def test_returns_404_when_accessing_reserved_api_path(self):
+        # Given
+        web_server, cache, config = create_components()
+
+        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+            # When
+            directory_service.start()
+
+            wait_for_condition(1, lambda: web_server.is_running())
+
+            client = web_server._app.test_client()
+
+            # When
+            response = client.get('/api/health')
+
+            # Then
+            self.assertEqual(404, response.status_code)
+
 
 def create_components():
     web_server = DefaultDirectoryServer(ServerConfig(['*:0']))
