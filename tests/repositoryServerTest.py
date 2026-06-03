@@ -4,9 +4,8 @@ from unittest import TestCase
 from unittest.mock import MagicMock
 
 from context_logger import setup_logging
-from test_utility import wait_for_assertion
-
 from package_repository import RepositoryService, DirectoryService, DefaultRepositoryServer
+from test_utility import wait_for_assertion
 from tests import APPLICATION_NAME
 
 

@@ -7,7 +7,6 @@ from unittest import TestCase
 from common_utility import delete_directory
 from context_logger import setup_logging
 from gnupg import GPG
-
 from package_repository import RepositoryConfig, DefaultRepositoryCreator, DefaultRepositorySigner, PrivateGpgKey, \
     PublicGpgKey, DefaultRepositoryCache, ReleaseInfo
 from tests import create_test_packages, TEST_RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, \

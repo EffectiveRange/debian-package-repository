@@ -3,7 +3,6 @@ from pathlib import Path
 from unittest import TestCase
 
 from context_logger import setup_logging
-
 from package_repository import DefaultRepositoryCache
 from tests import APPLICATION_NAME
 

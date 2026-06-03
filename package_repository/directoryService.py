@@ -117,20 +117,20 @@ class DefaultDirectoryService(DirectoryService):
 
         return Response(value)
 
-    def _load_from_cache(self, distribution: str, full_path: Path) -> Response:
-        content = self._repository_cache.load(distribution, full_path)
+    def _load_from_cache(self, distribution: str, cache_path: Path) -> Response:
+        content = self._repository_cache.load(distribution, cache_path)
 
         if not content:
-            self.log.error('Failed to load file from cache', distribution=distribution, path=str(full_path))
+            self.log.error('Failed to load file from cache', distribution=distribution, path=str(cache_path))
             return abort(404)
 
-        mimetype, encoding = mimetypes.guess_type(full_path)
+        mimetype, encoding = mimetypes.guess_type(cache_path)
 
         headers = {}
 
         if encoding:
             headers['Content-Encoding'] = encoding
-            headers['Content-Disposition'] = f'attachment; filename="{full_path.name}"'
+            headers['Content-Disposition'] = f'attachment; filename="{cache_path.name}"'
         elif not mimetype:
             mimetype = 'text/plain'
 

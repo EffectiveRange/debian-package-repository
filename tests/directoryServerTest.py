@@ -3,9 +3,8 @@ from unittest import TestCase
 
 from context_logger import setup_logging
 from flask import Response
-from test_utility import wait_for_condition
-
 from package_repository import ServerConfig, DefaultDirectoryServer
+from test_utility import wait_for_condition
 from tests import APPLICATION_NAME
 
 
