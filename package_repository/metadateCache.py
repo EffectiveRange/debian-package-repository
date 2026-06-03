@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from context_logger import get_logger
 from debian.deb822 import Deb822Dict
+from debian.debian_support import Version
 
 
 class MetadataCache(ABC):
@@ -33,7 +34,14 @@ class PackageMetadataCache(MetadataCache):
             self._write_cache[distribution] = {}
         if architecture not in self._write_cache[distribution]:
             self._write_cache[distribution][architecture] = {}
-        self._write_cache[distribution][architecture][metadata['Package']] = metadata
+
+        package = metadata['Package']
+
+        if cached := self._write_cache[distribution][architecture].get(package):
+            if Version(metadata['Version']) < Version(cached['Version']):
+                return
+
+        self._write_cache[distribution][architecture][package] = metadata
 
     def switch(self, distribution: str) -> None:
         if distribution in self._write_cache:

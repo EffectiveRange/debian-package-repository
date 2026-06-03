@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from context_logger import setup_logging
 from debian.deb822 import Deb822Dict
-from package_repository import PackageMetadataCache
+from package_repository.metadateCache import PackageMetadataCache
 from tests import APPLICATION_NAME
 
 
@@ -26,6 +26,32 @@ class PackageMetadataCacheTest(TestCase):
 
         # Then
         self.assertEqual(metadata, cache._write_cache['trixie']['amd64']['hello-world'])
+
+    def test_store_overwrites_when_newer_version_is_added(self):
+        # Given
+        cache = PackageMetadataCache()
+        older = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.0'})
+        newer = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.1'})
+        cache.store('trixie', 'amd64', older)
+
+        # When
+        cache.store('trixie', 'amd64', newer)
+
+        # Then
+        self.assertEqual(newer, cache._write_cache['trixie']['amd64']['hello-world'])
+
+    def test_store_does_not_overwrite_when_older_version_is_added(self):
+        # Given
+        cache = PackageMetadataCache()
+        newer = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.1'})
+        older = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.0'})
+        cache.store('trixie', 'amd64', newer)
+
+        # When
+        cache.store('trixie', 'amd64', older)
+
+        # Then
+        self.assertEqual(newer, cache._write_cache['trixie']['amd64']['hello-world'])
 
     def test_load(self):
         # Given
