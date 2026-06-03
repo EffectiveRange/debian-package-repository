@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call, patch
 
 from context_logger import setup_logging
 from package_repository import PackageWatcher, RepositoryCreator, RepositorySigner, RepositoryCache, \
-    DefaultRepositoryService
+    DefaultRepositoryService, MetadataLoader
 from test_utility import wait_for_assertion
 from tests import APPLICATION_NAME
 
@@ -21,8 +21,8 @@ class RepositoryServiceTest(TestCase):
 
     def test_start(self):
         # Given
-        watcher, creator, signer, cache = create_components()
-        service = DefaultRepositoryService(watcher, creator, signer, cache, {'bookworm', 'trixie'}, 0.1)
+        watcher, creator, signer, cache, loader = create_components()
+        service = DefaultRepositoryService(watcher, creator, signer, cache, loader, {'bookworm', 'trixie'}, 0.1)
 
         # When
         service.start()
@@ -36,11 +36,12 @@ class RepositoryServiceTest(TestCase):
         signer.sign.assert_has_calls([call('bookworm'), call('trixie')], any_order=True)
         watcher.register.assert_called_once_with(service._handle_event)
         watcher.start.assert_called_once()
+        loader.load.assert_has_calls([call('bookworm'), call('trixie')], any_order=True)
 
     def test_stop(self):
         # Given
-        watcher, creator, signer, cache = create_components()
-        service = DefaultRepositoryService(watcher, creator, signer, cache, {'bookworm', 'trixie'}, 0.1)
+        watcher, creator, signer, cache, loader = create_components()
+        service = DefaultRepositoryService(watcher, creator, signer, cache, loader, {'bookworm', 'trixie'}, 0.1)
 
         # When
         service.stop()
@@ -51,8 +52,8 @@ class RepositoryServiceTest(TestCase):
 
     def test_event_handled(self):
         # Given
-        watcher, creator, signer, cache = create_components()
-        service = DefaultRepositoryService(watcher, creator, signer, cache, {'bookworm', 'trixie'}, 0.1)
+        watcher, creator, signer, cache, loader = create_components()
+        service = DefaultRepositoryService(watcher, creator, signer, cache, loader, {'bookworm', 'trixie'}, 0.1)
 
         # When
         service._handle_event('trixie')
@@ -64,8 +65,8 @@ class RepositoryServiceTest(TestCase):
 
     def test_event_handled_when_another_event_is_handled(self):
         # Given
-        watcher, creator, signer, cache = create_components()
-        service = DefaultRepositoryService(watcher, creator, signer, cache, {'bookworm', 'trixie'}, 0.1)
+        watcher, creator, signer, cache, loader = create_components()
+        service = DefaultRepositoryService(watcher, creator, signer, cache, loader, {'bookworm', 'trixie'}, 0.1)
 
         service._handle_event('trixie')
 
@@ -79,8 +80,8 @@ class RepositoryServiceTest(TestCase):
 
     def test_event_not_handled_when_unsupported(self):
         # Given
-        watcher, creator, signer, cache = create_components()
-        service = DefaultRepositoryService(watcher, creator, signer, cache, {'bookworm', 'trixie'}, 0.1)
+        watcher, creator, signer, cache, loader = create_components()
+        service = DefaultRepositoryService(watcher, creator, signer, cache, loader, {'bookworm', 'trixie'}, 0.1)
 
         # When
         service._handle_event('unsupported')
@@ -93,9 +94,9 @@ class RepositoryServiceTest(TestCase):
     @patch('package_repository.repositoryService.signal.raise_signal')
     def test_update_repository_when_creator_fails_raises_sigint(self, mock_raise_signal):
         # Given
-        watcher, creator, signer, cache = create_components()
+        watcher, creator, signer, cache, loader = create_components()
         creator.create.side_effect = RuntimeError('boom')
-        service = DefaultRepositoryService(watcher, creator, signer, cache, {'bookworm', 'trixie'}, 0.1)
+        service = DefaultRepositoryService(watcher, creator, signer, cache, loader, {'bookworm', 'trixie'}, 0.1)
 
         # When
         service._update_repository('trixie')
@@ -111,8 +112,9 @@ def create_components():
     creator = MagicMock(spec=RepositoryCreator)
     signer = MagicMock(spec=RepositorySigner)
     cache = MagicMock(spec=RepositoryCache)
+    loader = MagicMock(spec=MetadataLoader)
 
-    return watcher, creator, signer, cache
+    return watcher, creator, signer, cache, loader
 
 
 if __name__ == "__main__":

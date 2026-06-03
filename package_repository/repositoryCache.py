@@ -53,7 +53,7 @@ class DefaultRepositoryCache(RepositoryCache):
             return None
 
     def switch(self, distribution: str) -> None:
-        if distribution in self._read_cache:
+        if distribution in self._write_cache:
             self.log.info('Switching repository cache for distribution', distribution=distribution)
             self._read_cache[distribution] = self._write_cache[distribution]
             self._write_cache[distribution] = {}

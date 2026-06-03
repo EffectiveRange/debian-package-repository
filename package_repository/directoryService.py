@@ -77,8 +77,9 @@ class DefaultDirectoryService(DirectoryService):
                 return self._list_directory(relative_path, full_path)
             elif relative_path.parts[0] == 'dists':
                 distribution = relative_path.parts[1]
-                self.log.debug('Serving cached file', distribution=distribution, path=str(full_path))
-                return self._load_from_cache(distribution, full_path)
+                cache_path = Path(*relative_path.parts[2:])
+                self.log.debug('Serving cached file', distribution=distribution, path=str(cache_path))
+                return self._load_from_cache(distribution, cache_path)
             elif full_path.is_file():
                 self.log.debug('Serving file', path=str(full_path))
                 return send_from_directory(self._config.root_dir, path, as_attachment=False, mimetype='text/plain')
@@ -88,18 +89,32 @@ class DefaultDirectoryService(DirectoryService):
 
         @app.route('/api/<distribution>/<architecture>/<package>', methods=['GET'])
         def serve_package_metadata(distribution: str, architecture: str, package: str) -> Response:
-            self.log.debug('API request for package metadata',
-                           distribution=distribution, architecture=architecture, package=package)
-            metadata = self._metadata_cache.load(distribution, architecture, package)
-            if metadata is None:
-                self.log.debug('Package metadata not found in cache',
-                               distribution=distribution, architecture=architecture, package=package)
-                return abort(404)
-            return self._add_headers(jsonify(metadata))
+            return self._load_metadata(distribution, architecture, package)
 
-    def _add_headers(self, response: Response) -> Response:
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
+        @app.route('/api/<distribution>/<architecture>/<package>/<key>', methods=['GET'])
+        def serve_package_metadata2(distribution: str, architecture: str, package: str, key: str) -> Response:
+            return self._load_metadata(distribution, architecture, package, key)
+
+    def _load_metadata(self, distribution: str, architecture: str, package: str, key: str | None = None) -> Response:
+        self.log.debug('API request for package metadata',
+                       distribution=distribution, architecture=architecture, package=package, key=key)
+
+        metadata = self._metadata_cache.load(distribution, architecture, package)
+
+        if metadata is None:
+            self.log.debug('Package metadata not found in cache',
+                           distribution=distribution, architecture=architecture, package=package, key=key)
+            return abort(404)
+
+        if key is None:
+            return jsonify(metadata)
+
+        value = metadata.get(key)
+
+        if value is None:
+            return Response(f"Key '{key}' not found in package '{package}' metadata")
+
+        return Response(value)
 
     def _load_from_cache(self, distribution: str, full_path: Path) -> Response:
         content = self._repository_cache.load(distribution, full_path)

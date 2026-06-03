@@ -2,7 +2,6 @@ import unittest
 from unittest import TestCase
 
 from context_logger import setup_logging
-
 from package_repository import PackageMetadataCache
 from tests import APPLICATION_NAME
 
@@ -47,7 +46,7 @@ class PackageMetadataCacheTest(TestCase):
         loaded = cache.load('invalid', 'amd64', 'hello-world')
 
         # Then
-        self.assertEqual({}, loaded)
+        self.assertIsNone(loaded)
 
     def test_load_when_architecture_is_invalid(self):
         # Given
@@ -59,7 +58,7 @@ class PackageMetadataCacheTest(TestCase):
         loaded = cache.load('trixie', 'arm64', 'hello-world')
 
         # Then
-        self.assertEqual({}, loaded)
+        self.assertIsNone(loaded)
 
     def test_switch(self):
         # Given
@@ -92,4 +91,3 @@ class PackageMetadataCacheTest(TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

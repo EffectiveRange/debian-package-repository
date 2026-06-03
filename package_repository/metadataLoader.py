@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from context_logger import get_logger
 from debian.deb822 import Packages
 from package_repository import RepositoryCache, MetadataCache
-from path import Path
 
 
 class MetadataLoader(ABC):
@@ -32,6 +32,6 @@ class PackageMetadataLoader(MetadataLoader):
                 self.log.info('Parsing metadata for architecture', distribution=distribution, architecture=architecture)
                 packages = Packages.iter_paragraphs(packages_content)
                 for package in packages:
-                    self._metadata_cache.store(distribution, architecture, package)
+                    self._metadata_cache.store(distribution, architecture, dict(package))
 
         self._metadata_cache.switch(distribution)

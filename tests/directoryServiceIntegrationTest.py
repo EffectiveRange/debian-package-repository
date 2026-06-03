@@ -4,11 +4,12 @@ import unittest
 from io import BytesIO
 from pathlib import Path
 from unittest import TestCase
+from unittest.mock import MagicMock
 
 from common_utility import delete_directory, create_file, create_directory
 from context_logger import setup_logging
 from package_repository import DefaultDirectoryServer, ServerConfig, DirectoryConfig, DefaultDirectoryService, \
-    DefaultRepositoryCache
+    DefaultRepositoryCache, PackageMetadataCache, MetadataCache
 from test_utility import wait_for_condition
 from tests import (
     create_test_packages,
@@ -19,7 +20,7 @@ from tests import (
 PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
 
 
-class DirectoryServiceTest(TestCase):
+class DirectoryServiceIntegrationTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -35,9 +36,9 @@ class DirectoryServiceTest(TestCase):
 
     def test_startup_and_shutdown(self):
         # Given
-        web_server, cache, config = create_components()
+        web_server, repo_cache, meta_cache, config = create_components()
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -48,9 +49,9 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_200_when_accessing_public_directory(self):
         # Given
-        web_server, cache, config = create_components()
+        web_server, repo_cache, meta_cache, config = create_components()
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -66,12 +67,12 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_200_when_accessing_public_text_file(self):
         # Given
-        web_server, cache, config = create_components()
+        web_server, repo_cache, meta_cache, config = create_components()
         file_path = PACKAGE_DIR / 'trixie/info.txt'
         file_content = 'This is a test file.'
         create_file(file_path, file_content)
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -88,9 +89,9 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_200_when_accessing_public_binary_file(self):
         # Given
-        web_server, cache, config = create_components()
+        web_server, repo_cache, meta_cache, config = create_components()
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -108,9 +109,9 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_404_when_accessing_non_cached_file(self):
         # Given
-        web_server, cache, config = create_components()
+        web_server, repo_cache, meta_cache, config = create_components()
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -126,12 +127,12 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_200_when_accessing_cached_extensionless_file(self):
         # Given
-        web_server, cache, config = create_components()
-        file_path = REPOSITORY_DIR / 'dists/trixie/info'
+        web_server, repo_cache, meta_cache, config = create_components()
+        file_path = Path('info')
         file_content = b'This is a test file.'
-        cache._read_cache['trixie'][file_path] = file_content
+        repo_cache._read_cache['trixie'][file_path] = file_content
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -149,12 +150,12 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_200_when_accessing_cached_text_file(self):
         # Given
-        web_server, cache, config = create_components()
-        file_path = REPOSITORY_DIR / 'dists/trixie/info.txt'
+        web_server, repo_cache, meta_cache, config = create_components()
+        file_path = Path('info.txt')
         file_content = b'This is a test file.'
-        cache._read_cache['trixie'][file_path] = file_content
+        repo_cache._read_cache['trixie'][file_path] = file_content
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -174,15 +175,15 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_200_when_accessing_cached_binary_file(self):
         # Given
-        web_server, cache, config = create_components()
-        compressed_path = REPOSITORY_DIR / 'dists/trixie/info.gz'
+        web_server, repo_cache, meta_cache, config = create_components()
+        compressed_path = Path('info.gz')
         file_content = b'This is a test file.'
         buffer = BytesIO()
         with gzip.GzipFile(fileobj=buffer, mode='wb') as gz:
             gz.write(file_content)
-        cache._read_cache['trixie'][compressed_path] = buffer.getvalue()
+        repo_cache._read_cache['trixie'][compressed_path] = buffer.getvalue()
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -199,13 +200,13 @@ class DirectoryServiceTest(TestCase):
             self.assertEqual(200, response.status_code)
             self.assertEqual('gzip', response.headers['Content-Encoding'])
             self.assertEqual('attachment; filename="info.gz"', response.headers['Content-Disposition'])
-            self.assertEqual(cache._read_cache['trixie'][compressed_path], response.data)
+            self.assertEqual(repo_cache._read_cache['trixie'][compressed_path], response.data)
 
     def test_returns_404_when_accessing_non_existing_path(self):
         # Given
-        web_server, cache, config = create_components()
+        web_server, repo_cache, meta_cache, config = create_components()
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -221,9 +222,9 @@ class DirectoryServiceTest(TestCase):
 
     def test_returns_404_when_accessing_reserved_api_path(self):
         # Given
-        web_server, cache, config = create_components()
+        web_server, repo_cache, meta_cache, config = create_components()
 
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
             # When
             directory_service.start()
 
@@ -237,13 +238,92 @@ class DirectoryServiceTest(TestCase):
             # Then
             self.assertEqual(404, response.status_code)
 
+    def test_returns_200_when_accessing_package_metadata_api(self):
+        # Given
+        web_server, repo_cache, meta_cache, config = create_components()
+        metadata = {'Package': 'hello-world', 'Version': '0.0.1', 'Architecture': 'amd64'}
+        meta_cache._read_cache['trixie'] = {'amd64': {'hello-world': metadata}}
+
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
+            directory_service.start()
+
+            wait_for_condition(1, lambda: web_server.is_running())
+            client = web_server._app.test_client()
+
+            # When
+            response = client.get('/api/trixie/amd64/hello-world')
+
+            # Then
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(metadata, response.get_json())
+
+    def test_returns_200_when_accessing_package_metadata_value_api(self):
+        # Given
+        web_server, repo_cache, meta_cache, config = create_components()
+        metadata = {'Package': 'hello-world', 'Version': '0.0.1'}
+        meta_cache._read_cache['trixie'] = {'amd64': {'hello-world': metadata}}
+
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
+            directory_service.start()
+
+            wait_for_condition(1, lambda: web_server.is_running())
+            client = web_server._app.test_client()
+
+            # When
+            response = client.get('/api/trixie/amd64/hello-world/Version')
+
+            # Then
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(b'0.0.1', response.data)
+
+    def test_returns_message_when_accessing_unknown_package_metadata_key(self):
+        # Given
+        web_server, repo_cache, meta_cache, config = create_components()
+        metadata = {'Package': 'hello-world', 'Version': '0.0.1'}
+        meta_cache._read_cache['trixie'] = {'amd64': {'hello-world': metadata}}
+
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
+            directory_service.start()
+
+            wait_for_condition(1, lambda: web_server.is_running())
+            client = web_server._app.test_client()
+
+            # When
+            response = client.get('/api/trixie/amd64/hello-world/UnknownKey')
+
+            # Then
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(b"Key 'UnknownKey' not found in package 'hello-world' metadata", response.data)
+
+    def test_returns_404_when_metadata_cache_returns_none(self):
+        # Given
+        web_server = DefaultDirectoryServer(ServerConfig(['*:0']))
+        repo_cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+        repo_cache.initialize()
+        meta_cache = MagicMock(spec=MetadataCache)
+        meta_cache.load.return_value = None
+        config = DirectoryConfig(REPOSITORY_DIR, '1.0.0', Path(f'{RESOURCE_ROOT}/templates/directory.j2'))
+
+        with DefaultDirectoryService(web_server, repo_cache, meta_cache, config) as directory_service:
+            directory_service.start()
+
+            wait_for_condition(1, lambda: web_server.is_running())
+            client = web_server._app.test_client()
+
+            # When
+            response = client.get('/api/trixie/amd64/hello-world')
+
+            # Then
+            self.assertEqual(404, response.status_code)
+
 
 def create_components():
     web_server = DefaultDirectoryServer(ServerConfig(['*:0']))
-    cache = DefaultRepositoryCache({'bookworm', 'trixie'})
-    cache.initialize()
+    repo_cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+    repo_cache.initialize()
+    meta_cache = PackageMetadataCache()
     config = DirectoryConfig(REPOSITORY_DIR, '1.0.0', Path(f'{RESOURCE_ROOT}/templates/directory.j2'))
-    return web_server, cache, config
+    return web_server, repo_cache, meta_cache, config
 
 
 if __name__ == '__main__':

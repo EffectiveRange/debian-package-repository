@@ -192,7 +192,8 @@ class DefaultRepositoryCreator(RepositoryCreator):
                 compressed_file.write(content)
             content = buffer.getvalue()
 
-        self._cache.store(distribution, file_path, content)
+        relative_path = file_path.relative_to(self._config.repository_dir / 'dists' / distribution)
+        self._cache.store(distribution, relative_path, content)
 
         with open(file_path, 'wb') as file:
             file.write(content)

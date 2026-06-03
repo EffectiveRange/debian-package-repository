@@ -1,8 +1,7 @@
 import unittest
+from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, call
-
-from path import Path
 
 from package_repository import PackageMetadataLoader, RepositoryCache, MetadataCache
 
@@ -37,6 +36,7 @@ class MetadataLoaderTest(TestCase):
             'amd64',
             {'Package': 'hello-world', 'Version': '1.0'},
         )
+        metadata_cache.switch.assert_called_once()
 
     def test_load_when_no_packages_content_does_not_parse_or_store(self):
         # Given
@@ -56,4 +56,3 @@ class MetadataLoaderTest(TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
