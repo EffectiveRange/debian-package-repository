@@ -100,16 +100,13 @@ class DefaultRepositoryCreator(RepositoryCreator):
         packages_files = []
 
         for component in self._config.components:
-            target_dir = self._config.repository_dir / 'dists' / distribution / component
-
-            create_directory(target_dir)
-
+            dist_path = self._config.repository_dir / 'dists' / distribution
             package_dir = Path('pool') / distribution / component
 
             create_directory(package_dir)
 
             for architecture in self._architectures:
-                arch_dir = target_dir / f'binary-{architecture}'
+                arch_dir = dist_path / component / f'binary-{architecture}'
 
                 create_directory(arch_dir)
 
@@ -133,7 +130,7 @@ class DefaultRepositoryCreator(RepositoryCreator):
 
                 packages_content = result.stdout
 
-                self._create_file(distribution, packages_path, packages_content)
+                self._create_file(distribution, dist_path, packages_path, packages_content)
 
                 self.log.info('Generated Packages file', file=str(packages_path),
                               distribution=distribution, component=component, architecture=architecture)
@@ -142,7 +139,7 @@ class DefaultRepositoryCreator(RepositoryCreator):
 
                 compressed_path = Path(f'{packages_path}.gz')
 
-                self._create_file(distribution, compressed_path, packages_content, compressed=True)
+                self._create_file(distribution, dist_path, compressed_path, packages_content, compressed=True)
 
                 packages_files.append(compressed_path)
 
@@ -182,19 +179,19 @@ class DefaultRepositoryCreator(RepositoryCreator):
 
         release_path = dist_path / 'Release'
 
-        self._create_file(distribution, release_path, rendered_content)
+        self._create_file(distribution, dist_path, release_path, rendered_content)
 
         self.log.info('Generated Release file', file=str(release_path), distribution=distribution)
 
-    def _create_file(self, distribution: str, file_path: Path, content: bytes, compressed: bool = False) -> None:
+    def _create_file(self, distribution: str, dist_path: Path, file_path: Path, content: bytes,
+                     compressed: bool = False) -> None:
         if compressed:
             buffer = BytesIO()
             with gzip.GzipFile(fileobj=buffer, mode='wb') as compressed_file:
                 compressed_file.write(content)
             content = buffer.getvalue()
 
-        relative_path = file_path.relative_to(self._config.repository_dir / 'dists' / distribution)
-        self._cache.store(distribution, relative_path, content)
+        self._cache.store(distribution, file_path.relative_to(dist_path), content)
 
         with open(file_path, 'wb') as file:
             file.write(content)

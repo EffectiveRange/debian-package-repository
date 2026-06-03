@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 from unittest import TestCase, mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 from common_utility import delete_directory, create_file, render_template_file
 from context_logger import setup_logging
@@ -96,6 +96,10 @@ class RepositorySignerTest(TestCase):
             ]
         )
         gpg.verify_file.assert_called()
+        cache.store.assert_has_calls([
+            call('trixie', Path('InRelease'), mock.ANY),
+            call('trixie', Path('Release.gpg'), mock.ANY)
+        ])
 
     def test_sign_when_fails_to_create_signature(self):
         # Given

@@ -117,7 +117,7 @@ class DefaultRepositorySigner(RepositorySigner):
 
         release_content = ''.join(release_lines).encode()
 
-        self._create_file(distribution, release_path, release_content)
+        self._create_file(distribution, release_path.parent, release_path, release_content)
 
     def _clearsign_release_file(self, distribution: str, release_path: Path) -> None:
         in_release_path = release_path.parent / 'InRelease'
@@ -146,13 +146,13 @@ class DefaultRepositorySigner(RepositorySigner):
                            return_code=result.returncode, data_failure=result.on_data_failure)
             raise GpgException('Failed to create signature', result)
         else:
-            self._create_file(distribution, signature_path, result.data)
+            self._create_file(distribution, release_path.parent, signature_path, result.data)
             self.log.debug('Created signature', file=str(signature_path))
 
         self._verify_signature(release_path, signature_path, detached=detach)
 
-    def _create_file(self, distribution: str, file_path: Path, content: bytes) -> None:
-        self._cache.store(distribution, file_path, content)
+    def _create_file(self, distribution: str, dist_path: Path, file_path: Path, content: bytes) -> None:
+        self._cache.store(distribution, file_path.relative_to(dist_path), content)
 
         with open(file_path, 'wb') as file:
             file.write(content)
