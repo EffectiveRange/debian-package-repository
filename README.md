@@ -11,11 +11,11 @@
 | package\_repository/metadateCache.py     |       30 |        0 |       10 |        0 |    100% |           |
 | package\_repository/packageWatcher.py    |       47 |        0 |        4 |        0 |    100% |           |
 | package\_repository/repositoryCache.py   |       31 |        0 |        8 |        0 |    100% |           |
-| package\_repository/repositoryCreator.py |      120 |        3 |       24 |        2 |     95% |94-97, 119-\>127 |
+| package\_repository/repositoryCreator.py |      118 |        3 |       24 |        2 |     95% |94-97, 116-\>124 |
 | package\_repository/repositoryServer.py  |       86 |       46 |        2 |        0 |     45% |68-125, 129, 133-136, 140-143 |
 | package\_repository/repositoryService.py |       55 |        0 |        8 |        0 |    100% |           |
 | package\_repository/repositorySigner.py  |       99 |        0 |       14 |        0 |    100% |           |
-| **TOTAL**                                |  **671** |   **52** |  **108** |    **6** | **92%** |           |
+| **TOTAL**                                |  **669** |   **52** |  **108** |    **6** | **92%** |           |
 
 
 ## Setup coverage badge
