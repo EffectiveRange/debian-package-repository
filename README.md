@@ -4,16 +4,18 @@
 
 | Name                                     |    Stmts |     Miss |   Branch |   BrPart |   Cover |   Missing |
 |----------------------------------------- | -------: | -------: | -------: | -------: | ------: | --------: |
-| package\_repository/\_\_init\_\_.py      |        8 |        0 |        0 |        0 |    100% |           |
-| package\_repository/directoryServer.py   |       55 |        3 |        4 |        2 |     92% |65, 75-\>exit, 90-91 |
-| package\_repository/directoryService.py  |       95 |        0 |       20 |        2 |     98% |114-\>117, 141-\>143 |
-| package\_repository/packageWatcher.py    |       50 |        0 |        4 |        0 |    100% |           |
-| package\_repository/repositoryCache.py   |       34 |        0 |        8 |        0 |    100% |           |
-| package\_repository/repositoryCreator.py |      120 |        3 |       24 |        2 |     95% |93-96, 118-\>126 |
-| package\_repository/repositoryServer.py  |       85 |       44 |        2 |        0 |     47% |66-119, 123, 127-130, 134-137 |
-| package\_repository/repositoryService.py |       54 |        0 |        8 |        0 |    100% |           |
-| package\_repository/repositorySigner.py  |      100 |        0 |       14 |        0 |    100% |           |
-| **TOTAL**                                |  **601** |   **50** |   **84** |    **6** | **91%** |           |
+| package\_repository/\_\_init\_\_.py      |       10 |        0 |        0 |        0 |    100% |           |
+| package\_repository/directoryServer.py   |       52 |        3 |        4 |        2 |     91% |66, 76-\>exit, 91-92 |
+| package\_repository/directoryService.py  |      118 |        0 |       28 |        2 |     99% |153-\>156, 180-\>182 |
+| package\_repository/metadataLoader.py    |       23 |        0 |        6 |        0 |    100% |           |
+| package\_repository/metadateCache.py     |       30 |        0 |       10 |        0 |    100% |           |
+| package\_repository/packageWatcher.py    |       47 |        0 |        4 |        0 |    100% |           |
+| package\_repository/repositoryCache.py   |       31 |        0 |        8 |        0 |    100% |           |
+| package\_repository/repositoryCreator.py |      120 |        3 |       24 |        2 |     95% |94-97, 119-\>127 |
+| package\_repository/repositoryServer.py  |       86 |       46 |        2 |        0 |     45% |68-125, 129, 133-136, 140-143 |
+| package\_repository/repositoryService.py |       55 |        0 |        8 |        0 |    100% |           |
+| package\_repository/repositorySigner.py  |       99 |        0 |       14 |        0 |    100% |           |
+| **TOTAL**                                |  **671** |   **52** |  **108** |    **6** | **92%** |           |
 
 
 ## Setup coverage badge
