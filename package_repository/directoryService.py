@@ -59,6 +59,7 @@ class DefaultDirectoryService(DirectoryService):
         app = self._web_server.get_app()
 
         app.template_folder = str(self._config.html_template.parent)
+        app.json.compact = False  # type: ignore
 
         @app.route('/', defaults={'path': ''}, methods=['GET'])
         @app.route('/<path:path>', methods=['GET'])
@@ -107,7 +108,7 @@ class DefaultDirectoryService(DirectoryService):
             return abort(404)
 
         if key is None:
-            return jsonify(metadata)
+            return jsonify(dict(metadata))
 
         value = metadata.get(key)
 

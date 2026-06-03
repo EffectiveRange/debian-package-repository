@@ -1,15 +1,16 @@
 from abc import ABC, abstractmethod
 
 from context_logger import get_logger
+from debian.deb822 import Deb822Dict
 
 
 class MetadataCache(ABC):
 
     @abstractmethod
-    def load(self, distribution: str, architecture: str, package: str) -> dict[str, str] | None: ...
+    def load(self, distribution: str, architecture: str, package: str) -> Deb822Dict | None: ...
 
     @abstractmethod
-    def store(self, distribution: str, architecture: str, metadata: dict[str, str]) -> None: ...
+    def store(self, distribution: str, architecture: str, metadata: Deb822Dict) -> None: ...
 
     @abstractmethod
     def switch(self, distribution: str) -> None: ...
@@ -18,16 +19,16 @@ class MetadataCache(ABC):
 class PackageMetadataCache(MetadataCache):
 
     def __init__(self) -> None:
-        self._write_cache: dict[str, dict[str, dict[str, dict[str, str]]]] = {}
-        self._read_cache: dict[str, dict[str, dict[str, dict[str, str]]]] = {}
+        self._write_cache: dict[str, dict[str, dict[str, Deb822Dict]]] = {}
+        self._read_cache: dict[str, dict[str, dict[str, Deb822Dict]]] = {}
         self.log = get_logger(type(self).__name__)
 
-    def load(self, distribution: str, architecture: str, package: str) -> dict[str, str] | None:
+    def load(self, distribution: str, architecture: str, package: str) -> Deb822Dict | None:
         architectures = self._read_cache.get(distribution, {})
         packages = architectures.get(architecture, {})
         return packages.get(package)
 
-    def store(self, distribution: str, architecture: str, metadata: dict[str, str]) -> None:
+    def store(self, distribution: str, architecture: str, metadata: Deb822Dict) -> None:
         if distribution not in self._write_cache:
             self._write_cache[distribution] = {}
         if architecture not in self._write_cache[distribution]:

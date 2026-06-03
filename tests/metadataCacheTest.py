@@ -2,6 +2,7 @@ import unittest
 from unittest import TestCase
 
 from context_logger import setup_logging
+from debian.deb822 import Deb822Dict
 from package_repository import PackageMetadataCache
 from tests import APPLICATION_NAME
 
@@ -18,7 +19,7 @@ class PackageMetadataCacheTest(TestCase):
     def test_store(self):
         # Given
         cache = PackageMetadataCache()
-        metadata = {'Package': 'hello-world', 'Version': '1.0.0'}
+        metadata = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.0'})
 
         # When
         cache.store('trixie', 'amd64', metadata)
@@ -29,7 +30,7 @@ class PackageMetadataCacheTest(TestCase):
     def test_load(self):
         # Given
         cache = PackageMetadataCache()
-        metadata = {'Package': 'hello-world', 'Version': '1.0.0'}
+        metadata = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.0'})
         cache._read_cache['trixie'] = {'amd64': {'hello-world': metadata}}
 
         # When
@@ -51,7 +52,7 @@ class PackageMetadataCacheTest(TestCase):
     def test_load_when_architecture_is_invalid(self):
         # Given
         cache = PackageMetadataCache()
-        metadata = {'Package': 'hello-world', 'Version': '1.0.0'}
+        metadata = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.0'})
         cache._read_cache['trixie'] = {'amd64': {'hello-world': metadata}}
 
         # When
@@ -63,7 +64,7 @@ class PackageMetadataCacheTest(TestCase):
     def test_switch(self):
         # Given
         cache = PackageMetadataCache()
-        metadata = {'Package': 'hello-world', 'Version': '1.0.0'}
+        metadata = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.0'})
         cache._read_cache['trixie'] = {}
         cache._write_cache['trixie'] = {'amd64': {'hello-world': metadata}}
 
@@ -77,7 +78,7 @@ class PackageMetadataCacheTest(TestCase):
     def test_switch_when_distribution_is_invalid(self):
         # Given
         cache = PackageMetadataCache()
-        metadata = {'Package': 'hello-world', 'Version': '1.0.0'}
+        metadata = Deb822Dict({'Package': 'hello-world', 'Version': '1.0.0'})
         cache._read_cache['trixie'] = {}
         cache._write_cache['trixie'] = {'amd64': {'hello-world': metadata}}
 
