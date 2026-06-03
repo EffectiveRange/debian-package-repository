@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import shutil
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from context_logger import get_logger
@@ -41,13 +42,13 @@ class PublicGpgKey(GpgKey):
         self.public_name = public_name
 
 
-class RepositorySigner:
+class RepositorySigner(ABC):
 
-    def initialize(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def initialize(self) -> None: ...
 
-    def sign(self, distribution: str) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def sign(self, distribution: str) -> None: ...
 
 
 class DefaultRepositorySigner(RepositorySigner):

@@ -2,24 +2,25 @@
 # SPDX-FileCopyrightText: 2024 Attila Gombos <attila.gombos@effective-range.com>
 # SPDX-License-Identifier: MIT
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from context_logger import get_logger
 
 
-class RepositoryCache:
+class RepositoryCache(ABC):
 
-    def initialize(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def initialize(self) -> None: ...
 
-    def store(self, distribution: str, path: Path, content: bytes) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def store(self, distribution: str, path: Path, content: bytes) -> None: ...
 
-    def load(self, distribution: str, path: Path) -> bytes | None:
-        raise NotImplementedError()
+    @abstractmethod
+    def load(self, distribution: str, path: Path) -> bytes | None: ...
 
-    def switch(self, distribution: str) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def switch(self, distribution: str) -> None: ...
 
 
 class DefaultRepositoryCache(RepositoryCache):

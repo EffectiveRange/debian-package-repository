@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: 2024 Attila Gombos <attila.gombos@effective-range.com>
 # SPDX-License-Identifier: MIT
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from threading import Thread, Lock
 from typing import Any
@@ -22,19 +23,19 @@ class ServerConfig:
     channel_timeout: int = 60
 
 
-class DirectoryServer:
+class DirectoryServer(ABC):
 
-    def start(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def start(self) -> None: ...
 
-    def stop(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def stop(self) -> None: ...
 
-    def is_running(self) -> bool:
-        raise NotImplementedError()
+    @abstractmethod
+    def is_running(self) -> bool: ...
 
-    def get_app(self) -> Flask:
-        raise NotImplementedError()
+    @abstractmethod
+    def get_app(self) -> Flask: ...
 
 
 class DefaultDirectoryServer(DirectoryServer):

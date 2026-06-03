@@ -3,19 +3,20 @@
 # SPDX-License-Identifier: MIT
 
 import signal
+from abc import ABC, abstractmethod
 
 from common_utility import IReusableTimer, ReusableTimer
 from context_logger import get_logger
 from package_repository import RepositoryCreator, RepositorySigner, RepositoryCache, PackageWatcher, MetadataLoader
 
 
-class RepositoryService:
+class RepositoryService(ABC):
 
-    def start(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def start(self) -> None: ...
 
-    def stop(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def stop(self) -> None: ...
 
 
 class DefaultRepositoryService(RepositoryService):

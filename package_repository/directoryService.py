@@ -5,6 +5,7 @@
 import mimetypes
 import os
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -22,13 +23,13 @@ class DirectoryConfig:
     html_template: Path
 
 
-class DirectoryService:
+class DirectoryService(ABC):
 
-    def start(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def start(self) -> None: ...
 
-    def stop(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def stop(self) -> None: ...
 
 
 class DefaultDirectoryService(DirectoryService):

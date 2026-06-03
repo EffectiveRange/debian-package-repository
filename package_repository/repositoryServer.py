@@ -4,6 +4,7 @@
 
 import os
 import signal
+from abc import ABC, abstractmethod
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from threading import Event
@@ -25,13 +26,13 @@ log = get_logger('RepositoryServerApp')
 DEFAULT_CONFIG_PATH = Path(f'/etc/effective-range/{APPLICATION_NAME}/{APPLICATION_NAME}.conf.default')
 
 
-class RepositoryServer:
+class RepositoryServer(ABC):
 
-    def run(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def run(self) -> None: ...
 
-    def shutdown(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def shutdown(self) -> None: ...
 
 
 class DefaultRepositoryServer(RepositoryServer):
