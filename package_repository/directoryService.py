@@ -4,16 +4,16 @@
 
 import mimetypes
 import os
+import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-import time
-
 from context_logger import get_logger
-from flask import send_from_directory, abort, request, Response, render_template
-from package_repository import RepositoryCache, DirectoryServer
+from flask import send_from_directory, abort, request, Response, render_template, jsonify
+from package_repository import RepositoryCache, DirectoryServer, MetadataCache
 
 
 @dataclass
@@ -23,20 +23,22 @@ class DirectoryConfig:
     html_template: Path
 
 
-class DirectoryService:
+class DirectoryService(ABC):
 
-    def start(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def start(self) -> None: ...
 
-    def stop(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def stop(self) -> None: ...
 
 
 class DefaultDirectoryService(DirectoryService):
 
-    def __init__(self, web_server: DirectoryServer, cache: RepositoryCache, config: DirectoryConfig) -> None:
+    def __init__(self, web_server: DirectoryServer, repository_cache: RepositoryCache, metadata_cache: MetadataCache,
+                 config: DirectoryConfig) -> None:
         self._web_server = web_server
-        self._cache = cache
+        self._repository_cache = repository_cache
+        self._metadata_cache = metadata_cache
         self._config = config
         self.log = get_logger(type(self).__name__)
 
@@ -58,11 +60,18 @@ class DefaultDirectoryService(DirectoryService):
         app = self._web_server.get_app()
 
         app.template_folder = str(self._config.html_template.parent)
+        app.json.compact = False  # type: ignore
 
-        @app.route('/', defaults={'path': ''})
-        @app.route('/<path:path>')
+        @app.route('/', defaults={'path': ''}, methods=['GET'])
+        @app.route('/<path:path>', methods=['GET'])
         def serve_file_or_directory(path: str) -> Response:
             relative_path = Path(path)
+
+            # Reserve /api for explicit API routes instead of static file serving.
+            if path.startswith('api/'):
+                self.log.debug('Reserved API path requested from file endpoint', path=path)
+                return abort(404)
+
             full_path = self._config.root_dir / relative_path
 
             if full_path.is_dir():
@@ -70,8 +79,9 @@ class DefaultDirectoryService(DirectoryService):
                 return self._list_directory(relative_path, full_path)
             elif relative_path.parts[0] == 'dists':
                 distribution = relative_path.parts[1]
-                self.log.debug('Serving cached file', distribution=distribution, path=str(full_path))
-                return self._load_from_cache(distribution, full_path)
+                cache_path = Path(*relative_path.parts[2:])
+                self.log.debug('Serving cached file', distribution=distribution, path=str(cache_path))
+                return self._load_from_cache(distribution, cache_path)
             elif full_path.is_file():
                 self.log.debug('Serving file', path=str(full_path))
                 return send_from_directory(self._config.root_dir, path, as_attachment=False, mimetype='text/plain')
@@ -79,20 +89,49 @@ class DefaultDirectoryService(DirectoryService):
                 self.log.debug('File or directory not found', path=str(full_path))
                 return abort(404)
 
-    def _load_from_cache(self, distribution: str, full_path: Path) -> Response:
-        content = self._cache.load(distribution, full_path)
+        @app.route('/api/<distribution>/<architecture>/<package>', methods=['GET'])
+        def serve_package_metadata(distribution: str, architecture: str, package: str) -> Response:
+            return self._load_metadata(distribution, architecture, package)
 
-        if not content:
-            self.log.error('Failed to load file from cache', distribution=distribution, path=str(full_path))
+        @app.route('/api/<distribution>/<architecture>/<package>/<key>', methods=['GET'])
+        def serve_package_metadata2(distribution: str, architecture: str, package: str, key: str) -> Response:
+            return self._load_metadata(distribution, architecture, package, key)
+
+    def _load_metadata(self, distribution: str, architecture: str, package: str, key: str | None = None) -> Response:
+        self.log.debug('API request for package metadata',
+                       distribution=distribution, architecture=architecture, package=package, key=key)
+
+        metadata = self._metadata_cache.load(distribution, architecture, package)
+
+        if metadata is None:
+            self.log.debug('Package metadata not found in cache',
+                           distribution=distribution, architecture=architecture, package=package, key=key)
             return abort(404)
 
-        mimetype, encoding = mimetypes.guess_type(full_path)
+        if key is None:
+            return jsonify(dict(metadata))
+
+        value = metadata.get(key)
+
+        if value is None:
+            return Response(f"Key '{key}' not found in package '{package}' metadata")
+
+        return Response(value)
+
+    def _load_from_cache(self, distribution: str, cache_path: Path) -> Response:
+        content = self._repository_cache.load(distribution, cache_path)
+
+        if not content:
+            self.log.error('Failed to load file from cache', distribution=distribution, path=str(cache_path))
+            return abort(404)
+
+        mimetype, encoding = mimetypes.guess_type(cache_path)
 
         headers = {}
 
         if encoding:
             headers['Content-Encoding'] = encoding
-            headers['Content-Disposition'] = f'attachment; filename="{full_path.name}"'
+            headers['Content-Disposition'] = f'attachment; filename="{cache_path.name}"'
         elif not mimetype:
             mimetype = 'text/plain'
 

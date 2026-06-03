@@ -7,6 +7,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import BytesIO
@@ -37,13 +38,13 @@ class ReleaseInfo:
     description: str
 
 
-class RepositoryCreator:
+class RepositoryCreator(ABC):
 
-    def initialize(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def initialize(self) -> None: ...
 
-    def create(self, distribution: str) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def create(self, distribution: str) -> None: ...
 
 
 class DefaultRepositoryCreator(RepositoryCreator):
@@ -192,7 +193,8 @@ class DefaultRepositoryCreator(RepositoryCreator):
                 compressed_file.write(content)
             content = buffer.getvalue()
 
-        self._cache.store(distribution, file_path, content)
+        relative_path = file_path.relative_to(self._config.repository_dir / 'dists' / distribution)
+        self._cache.store(distribution, relative_path, content)
 
         with open(file_path, 'wb') as file:
             file.write(content)

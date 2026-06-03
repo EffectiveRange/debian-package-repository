@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: 2024 Attila Gombos <attila.gombos@effective-range.com>
 # SPDX-License-Identifier: MIT
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Protocol
 
@@ -14,19 +15,19 @@ class OnPackageEvent(Protocol):
     def __call__(self, distribution: str) -> None: ...
 
 
-class PackageWatcher:
+class PackageWatcher(ABC):
 
-    def start(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def start(self) -> None: ...
 
-    def stop(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def stop(self) -> None: ...
 
-    def register(self, handler: OnPackageEvent) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def register(self, handler: OnPackageEvent) -> None: ...
 
-    def deregister(self, handler: OnPackageEvent) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def deregister(self, handler: OnPackageEvent) -> None: ...
 
 
 class DefaultPackageWatcher(PackageWatcher, FileSystemEventHandler):

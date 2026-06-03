@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 from common_utility import delete_directory, create_file, render_template_file
 from context_logger import setup_logging
 from gnupg import GPG, Sign, Verify, ImportResult
-
 from package_repository import DefaultRepositorySigner, GpgException, PublicGpgKey, PrivateGpgKey, RepositoryCache
 from tests import TEST_RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, RELEASE_TEMPLATE_PATH
 

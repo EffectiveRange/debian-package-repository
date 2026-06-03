@@ -90,6 +90,7 @@ setup(
         'jinja2',
         'python-gnupg',
         'requests',
+        'python-debian',
         'python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@v1.7.6',
     ],
 )

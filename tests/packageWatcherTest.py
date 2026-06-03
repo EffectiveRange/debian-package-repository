@@ -3,11 +3,10 @@ from unittest import TestCase
 from unittest.mock import MagicMock
 
 from context_logger import setup_logging
-from watchdog.events import FileCreatedEvent
-from watchdog.observers.api import BaseObserver
-
 from package_repository import DefaultPackageWatcher, OnPackageEvent
 from tests import APPLICATION_NAME, PACKAGE_DIR
+from watchdog.events import FileCreatedEvent
+from watchdog.observers.api import BaseObserver
 
 
 class PackageWatcherTest(TestCase):

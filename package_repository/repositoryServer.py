@@ -4,6 +4,7 @@
 
 import os
 import signal
+from abc import ABC, abstractmethod
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from threading import Event
@@ -16,7 +17,8 @@ from gnupg import GPG
 from package_repository import (RepositoryService, DirectoryService, PublicGpgKey, PrivateGpgKey,
                                 DefaultPackageWatcher, DefaultRepositoryCache, RepositoryConfig, ReleaseInfo,
                                 DefaultRepositoryCreator, DefaultRepositorySigner, DefaultRepositoryService,
-                                ServerConfig, DefaultDirectoryServer, DirectoryConfig, DefaultDirectoryService)
+                                ServerConfig, DefaultDirectoryServer, DirectoryConfig, DefaultDirectoryService,
+                                PackageMetadataCache, PackageMetadataLoader)
 from watchdog.observers import Observer
 
 log = get_logger('RepositoryServerApp')
@@ -24,13 +26,13 @@ log = get_logger('RepositoryServerApp')
 DEFAULT_CONFIG_PATH = Path(f'/etc/effective-range/{APPLICATION_NAME}/{APPLICATION_NAME}.conf.default')
 
 
-class RepositoryServer:
+class RepositoryServer(ABC):
 
-    def run(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def run(self) -> None: ...
 
-    def shutdown(self) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def shutdown(self) -> None: ...
 
 
 class DefaultRepositoryServer(RepositoryServer):
@@ -97,15 +99,19 @@ def main() -> None:
     repository_creator = DefaultRepositoryCreator(repository_cache, repository_config, release_info)
     repository_signer = DefaultRepositorySigner(repository_cache, GPG(), private_key, public_key, repository_dir)
 
+    metadata_cache = PackageMetadataCache()
+    metadata_loader = PackageMetadataLoader(repository_cache, metadata_cache, architectures)
+
     repository_service = DefaultRepositoryService(package_watcher, repository_creator, repository_signer,
-                                                  repository_cache, distributions, config.repo_create_delay)
+                                                  repository_cache, metadata_loader, distributions,
+                                                  config.repo_create_delay)
 
     server_config = ServerConfig([f'{config.server_host}:{config.server_port}'], config.server_scheme,
                                  config.server_prefix, config.server_threads, config.server_backlog,
                                  config.server_connection_limit, config.server_channel_timeout)
     directory_server = DefaultDirectoryServer(server_config)
     directory_config = DirectoryConfig(repository_dir, app_version, directory_template)
-    directory_service = DefaultDirectoryService(directory_server, repository_cache, directory_config)
+    directory_service = DefaultDirectoryService(directory_server, repository_cache, metadata_cache, directory_config)
 
     repository_server = DefaultRepositoryServer(repository_service, directory_service)
 

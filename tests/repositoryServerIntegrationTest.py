@@ -13,7 +13,8 @@ from context_logger import setup_logging
 from gnupg import GPG
 from package_repository import DefaultDirectoryService, DefaultRepositoryService, DirectoryConfig, \
     DefaultDirectoryServer, ServerConfig, DefaultRepositoryCache, DefaultRepositorySigner, DefaultRepositoryCreator, \
-    RepositoryConfig, DefaultPackageWatcher, PublicGpgKey, PrivateGpgKey, DefaultRepositoryServer, ReleaseInfo
+    RepositoryConfig, DefaultPackageWatcher, PublicGpgKey, PrivateGpgKey, DefaultRepositoryServer, ReleaseInfo, \
+    PackageMetadataCache, PackageMetadataLoader
 from test_utility import wait_for_condition, compare_lines
 from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, \
     PACKAGE_DIR, RELEASE_TEMPLATE_PATH
@@ -195,13 +196,14 @@ def create_components():
     private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
     repository_signer = DefaultRepositorySigner(repository_cache, GPG(), private_key, public_key, REPOSITORY_DIR)
+    metadata_cache = PackageMetadataCache()
+    metadata_loader = PackageMetadataLoader(repository_cache, metadata_cache, ARCHITECTURES)
     repository_service = DefaultRepositoryService(package_watcher, repository_creator, repository_signer,
-                                                  repository_cache, DISTRIBUTIONS, 0.1)
-
+                                                  repository_cache, metadata_loader, DISTRIBUTIONS, 0.1)
     server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', "", 32, 1024, 1000, 60)
     directory_server = DefaultDirectoryServer(server_config)
     directory_config = DirectoryConfig(REPOSITORY_DIR, APP_VERSION, DIRECTORY_TEMPLATE_PATH)
-    directory_service = DefaultDirectoryService(directory_server, repository_cache, directory_config)
+    directory_service = DefaultDirectoryService(directory_server, repository_cache, metadata_cache, directory_config)
 
     return repository_service, directory_service, directory_server
 
